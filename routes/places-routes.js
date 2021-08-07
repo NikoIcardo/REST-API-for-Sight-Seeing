@@ -1,5 +1,7 @@
 const express = require("express");
 
+const HttpError = require('../models/http-error'); 
+
 const router = express.Router();
 /* gives a special object that can also register middleware, 
   but once configured, the router can be exported and imported 
@@ -22,14 +24,12 @@ const DUMMY_PLACES = [
 router.get("/:pid", (req, res, next) => {
   const placeId = req.params.pid; // {pid: 'p1'}
 
-  const place = DUMMY_PLACES.find((p) => {
+  const place = DUMMY_PLACES.find(p => {
     return p.id === placeId;
   });
 
   if(!place) {
-    const error = new Error('Could not find for the provided place id.');
-    error.code = 404; 
-    throw error; 
+    throw new HttpError('Could not find for the provided place id.', 404);
   }
 
   res.json({ place }); // { place } => { place: place }
@@ -38,14 +38,12 @@ router.get("/:pid", (req, res, next) => {
 router.get("/user/:uid", (req, res, next) => {
   const userId = req.params.uid; // {pid: 'p1'}
 
-  const place = DUMMY_PLACES.find((p) => {
+  const place = DUMMY_PLACES.find(p => {
     return p.creator === userId;
   });
 
-  if(!place) {
-    const error = new Error('Could not find for the provided user id.');
-    error.code = 404; 
-    next(error); 
+  if(!place) { 
+    return next(new HttpError('Could not find for the provided user id.', 404)); 
   }
 
   res.json({ place }); // { place } => { place: place }
