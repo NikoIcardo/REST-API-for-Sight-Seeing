@@ -1,4 +1,4 @@
-const express = require("express");
+const express = require('express');
 
 const placesControllers = require('../controllers/places-controllers');
 
@@ -7,8 +7,14 @@ const router = express.Router();
   but once configured, the router can be exported and imported 
   in app.js and registered as a single midleware in app.js*/
 
-router.get("/:pid", placesControllers.getPlaceById);
+router.get('/:pid', placesControllers.getPlaceById);
 
-router.get("/user/:uid", placesControllers.getPlacebyUserId);
+router.get('/user/:uid', placesControllers.getPlacebyUserId);
+
+router.post('/', placesControllers.createPlace); 
+
+router.patch('/:pid', placesControllers.updatePlace); 
+
+router.delete('/:pid', placesControllers.deletePlace);
 
 module.exports = router;
