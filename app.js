@@ -1,11 +1,13 @@
 const express = require('express');
 const bodyParser = require('body-parser'); 
+const mongoose = require('mongoose');
 
 const placesRoutes = require('./routes/places-routes'); 
 const usersRoutes = require('./routes/users-routes'); 
 const HttpError = require('./models/http-error');
 
 const app = express(); 
+const url = 'mongodb+srv://Niko:eKkVDD5ZQ44JsDn@cluster0.arfc1.mongodb.net/Places?retryWrites=true&w=majority';
 
 app.use(bodyParser.json()); // this will extract any json data and convert it to js data structures, then call next automatically
 
@@ -25,5 +27,13 @@ app.use((error, req, res, next) => {
   res.json({message: error.message || 'An unknown error occurred!'}); // default error
 });  // error handler. Will execute if any previous middleware function yields an error
 
-app.listen(5000); 
+
+mongoose.connect(url)
+  .then(() => {
+    app.listen(5000); 
+  })
+  .catch(err => {
+    console.log(err);
+  });
+
 
