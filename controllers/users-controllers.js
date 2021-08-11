@@ -2,6 +2,7 @@ const { v4: uuidv4 } = require("uuid"); // unique id with a timestamp component
 const { validationResult } = require("express-validator");
 
 const HttpError = require("../models/http-error");
+const User = require('../models/users');
 
 const DUMMY_USERS = [
   {
@@ -27,32 +28,47 @@ const login = (req, res, next) => {
   res.status(200).json({ message: "Login Successful!" });
 };
 
-const signup = (req, res, next) => {
+const signup = async (req, res, next) => {
   const errors = validationResult(req); 
 
   if(!errors.isEmpty()){
     console.log(errors.errors);
-    throw new HttpError('Could not signup, please check that you entered a valid name, email, and password.', 422);
+    const error = new HttpError('Could not signup, please check that you entered a valid name, email, and password.', 422);
+    return next(error);
   }
 
-  const { name, email, password } = req.body;
+  const { name, email, password, places } = req.body;
 
-  const hasUser = DUMMY_USERS.find((u) => u.email === email);
-
-  if (hasUser) {
-    throw new HttpError("Could not create user, email already exists.", 422);
+  let existingUser;
+  try{
+    existingUser = await User.findOne({email: email});
+  } catch (err) {
+    const error = new HttpError('Something went wrong, unable to check specified email address.', 500);
+    return next(error); 
   }
 
-  const createUser = {
-    id: uuidv4(),
-    name,
-    email,
-    password,
-  };
+  if (existingUser) {
+    const error = new HttpError('User exists already, please login.', 422); 
+    return next(error); 
+  }
 
-  DUMMY_USERS.push(createUser);
+  const createUser = new User({
+    name, 
+    email, 
+    image: 
+    'https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.eguardtech.com%2Fblog%2Fchanging-your-network-profile%2F&psig=AOvVaw3_9smKJbQxvAwaFExUMnrc&ust=1628774683793000&source=images&cd=vfe&ved=0CAsQjRxqFwoTCMjMgNyIqfICFQAAAAAdAAAAABAE', 
+    password, 
+    places
+  }); 
 
-  res.status(201).json({ message: "User Created", user: createUser });
+  try{
+    await createUser.save();
+  } catch (err) {
+    const error = new HttpError('Something went wrong, unable to signup.', 500);
+    return next(error); 
+  }
+
+  res.status(201).json({user: createUser.toObject({getters: true})});
 };
 
 const retrieveUsers = (req, res, next) => {

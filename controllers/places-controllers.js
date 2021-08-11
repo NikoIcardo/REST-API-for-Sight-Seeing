@@ -109,7 +109,8 @@ const updatePlace = async (req, res, next) => {
   const errors = validationResult(req); // checks to see if the express-validator functions passed to the router function returned any errors
 
   if (!errors.isEmpty()) {
-    throw new HttpError("Missing input, please check your data.", 422);
+    const error = new HttpError("Missing input, please check your data.", 422);
+    return next(error); 
   }
 
   const { title, description } = req.body;
