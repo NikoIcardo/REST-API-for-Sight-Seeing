@@ -3,7 +3,7 @@ const { validationResult } = require("express-validator");
 
 const HttpError = require("../models/http-error");
 const getCoordsForAddress = require("../util/location");
-const Place = require('../models/places.js'); 
+const Place = require("../models/places.js");
 
 let DUMMY_PLACES = [
   {
@@ -19,34 +19,51 @@ let DUMMY_PLACES = [
   },
 ];
 
-const getPlaceById = (req, res, next) => {
+const getPlaceById = async (req, res, next) => {
   const placeId = req.params.pid; // {pid: 'p1'}
 
-  const place = DUMMY_PLACES.find((p) => {
-    return p.id === placeId;
-  });
-
-  if (!place) {
-    throw new HttpError("Could not find for the provided place id.", 404);
+  let place;
+  try {
+    place = await Place.findById(placeId); // no promise, but if you need one, you can call .exec()
+  } catch (err) {
+    const error = new HttpError(
+      "Something went wrong, unable to find a place with that id.",
+      500
+    );
+    return next(error);
   }
 
-  res.json({ place }); // { place } => { place: place }
+  if (!place) {
+    const error = new HttpError("The specified id does not exist.", 404);
+    return next(error);
+  }
+
+  res.json({ place: place.toObject({ getters: true }) }); //  turn the mongoose object into a normal js object then set the _id to an id with getters: true
 };
 
-const getPlacesByUserId = (req, res, next) => {
+const getPlacesByUserId = async (req, res, next) => {
   const userId = req.params.uid; // {pid: 'p1'}
 
-  const places = DUMMY_PLACES.filter((p) => {
-    return p.creator === userId;
-  });
+  let places;
+  try {
+    places = await Place.find({ creator: userId });
+  } catch (err) {
+    const error = new HttpError(
+      "Something went wrong, could not find places for specified user id.",
+      505
+    );
+    return next(error);
+  }
 
   if (!places || places.length === 0) {
     return next(
-      new HttpError("Could not find places for the provided user id.", 404)
+      new HttpError("Could not find a place for the provided user id.", 404)
     );
   }
 
-  res.json({ places }); // { place } => { place: place }
+  res.json({
+    places: places.map((place) => place.toObject({ getters: true })),
+  }); // { place } => { place: place }
 };
 
 const createPlace = async (req, res, next) => {
@@ -69,26 +86,26 @@ const createPlace = async (req, res, next) => {
   }
 
   const createdPlace = new Place({
-    title, 
-    description, 
-    address, 
-    location: coordinates, 
-    image: 'https://images.unsplash.com/photo-1555109307-f7d9da25c244?ixid=MnwxMjA3fDB8MHxzZWFyY2h8MXx8ZW1waXJlJTIwc3RhdGUlMjBidWlsZGluZ3xlbnwwfHwwfHw%3D&ixlib=rb-1.2.1&w=1000&q=80',
-    creator
-  }); 
+    title,
+    description,
+    address,
+    location: coordinates,
+    image:
+      "https://images.unsplash.com/photo-1555109307-f7d9da25c244?ixid=MnwxMjA3fDB8MHxzZWFyY2h8MXx8ZW1waXJlJTIwc3RhdGUlMjBidWlsZGluZ3xlbnwwfHwwfHw%3D&ixlib=rb-1.2.1&w=1000&q=80",
+    creator,
+  });
 
   try {
-    await createdPlace.save(); 
-  } catch(err) {
-    const error = new HttpError('Creating place failed please try again.', 500);
+    await createdPlace.save();
+  } catch (err) {
+    const error = new HttpError("Creating place failed please try again.", 500);
     return next(error);
   }
-  
 
   res.status(201).json({ place: createdPlace }); //successful creation
 };
 
-const updatePlace = (req, res, next) => {
+const updatePlace = async (req, res, next) => {
   const errors = validationResult(req); // checks to see if the express-validator functions passed to the router function returned any errors
 
   if (!errors.isEmpty()) {
@@ -98,25 +115,52 @@ const updatePlace = (req, res, next) => {
   const { title, description } = req.body;
   const placeId = req.params.pid;
 
-  const updatedPlace = { ...DUMMY_PLACES.find((p) => p.id === placeId) };
-  const placeIndex = DUMMY_PLACES.findIndex((p) => p.id === placeId);
+  let updatedPlace;
+  try {
+    updatedPlace = await Place.findById(placeId);
+  } catch (err) {
+    const error = new HttpError(
+      "Something went wrong, cannot find place with that id.",
+      500
+    );
+    return next(error);
+  }
 
+  console.log(updatedPlace.title);
   updatedPlace.title = title;
+  console.log(updatedPlace.title);
   updatedPlace.description = description;
 
-  DUMMY_PLACES[placeIndex] = updatedPlace;
+  try {
+    await updatedPlace.save();
+  } catch (err) {
+    const error = new HttpError(
+      "Something went wrong, cannot save place.",
+      500
+    );
+    return next(error);
+  }
 
-  res.status(200).json({ place: updatedPlace });
+  res.status(200).json({ place: updatedPlace.toObject({ getters: true }) });
 };
 
-const deletePlace = (req, res, next) => {
-  if (!DUMMY_PLACES.find((p) => p.id === req.params.pid)) {
-    throw new HttpError("The place with the specified id does not exist.", 404);
+const deletePlace = async (req, res, next) => {
+  placeId = req.params.pid; 
+
+  let deletedPlace; 
+  try{
+    deletedPlace = await Place.findById(placeId);
+  } catch(err) {
+    const error = new HttpError('Something went wrong could not find place by specified id.', 500); 
+    return next(error); 
   }
-  DUMMY_PLACES = DUMMY_PLACES.filter((p) => p.id !== req.params.pid);
-  res.status(200).json({
-    message: "Place with id " + req.params.pid + " has been deleted.",
-  });
+
+  try{
+    await deletedPlace.remove();
+  } catch(err) {
+    const error = new HttpError('Something went wrong could not delete place.', 500); 
+    return next(error); 
+  }
 };
 
 exports.getPlaceById = getPlaceById;
