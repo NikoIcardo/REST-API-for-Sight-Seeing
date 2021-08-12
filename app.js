@@ -7,9 +7,16 @@ const usersRoutes = require('./routes/users-routes');
 const HttpError = require('./models/http-error');
 
 const app = express(); 
-const url = 'mongodb+srv://Niko:eKkVDD5ZQ44JsDn@cluster0.arfc1.mongodb.net/Places?retryWrites=true&w=majority';
+const url = 'mongodb+srv://Niko:eKkVDD5ZQ44JsDn@cluster0.arfc1.mongodb.net/mern?retryWrites=true&w=majority';
 
 app.use(bodyParser.json()); // this will extract any json data and convert it to js data structures, then call next automatically
+
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE'); //Which methods may be used on the front end. 
+  next();
+});
 
 app.use('/api/places', placesRoutes); // => /api/places/...
 app.use('/api/users', usersRoutes); 
