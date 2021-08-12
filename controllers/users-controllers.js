@@ -1,17 +1,7 @@
-const { v4: uuidv4 } = require("uuid"); // unique id with a timestamp component
 const { validationResult } = require("express-validator");
 
 const HttpError = require("../models/http-error");
 const User = require('../models/users');
-
-const DUMMY_USERS = [
-  {
-    id: "u1",
-    name: "Niko Icardo",
-    email: "test@test.com",
-    password: "testers",
-  },
-];
 
 const login = async (req, res, next) => {
   const { email, password } = req.body;
@@ -41,7 +31,7 @@ const signup = async (req, res, next) => {
     return next(error);
   }
 
-  const { name, email, password, places } = req.body;
+  const { name, email, password } = req.body;
 
   let existingUser;
   try{
@@ -62,7 +52,7 @@ const signup = async (req, res, next) => {
     image: 
     'https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.eguardtech.com%2Fblog%2Fchanging-your-network-profile%2F&psig=AOvVaw3_9smKJbQxvAwaFExUMnrc&ust=1628774683793000&source=images&cd=vfe&ved=0CAsQjRxqFwoTCMjMgNyIqfICFQAAAAAdAAAAABAE', 
     password, 
-    places
+    places: []
   }); 
 
   try{
@@ -75,8 +65,15 @@ const signup = async (req, res, next) => {
   res.status(201).json({user: createUser.toObject({getters: true})});
 };
 
-const retrieveUsers = (req, res, next) => {
-  res.status(200).json({ users: DUMMY_USERS });
+const retrieveUsers = async (req, res, next) => {
+  let allUsers; 
+  try {
+    allUsers = await User.find({}, '-password'); 
+  } catch(err) {
+    const error = new HttpError('Something went wrong, unable to retrieve user list right now.', 500);
+    return next(error);  
+  }
+  res.json({users: allUsers.map(user => user.toObject({getters: true}))}); 
 };
 
 exports.login = login;

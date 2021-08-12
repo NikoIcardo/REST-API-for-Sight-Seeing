@@ -1,26 +1,15 @@
 const { v4: uuidv4 } = require("uuid"); // unique id with a timestamp component
 const { validationResult } = require("express-validator");
+const mongoose = require('mongoose');
 
 const HttpError = require("../models/http-error");
 const getCoordsForAddress = require("../util/location");
 const Place = require("../models/places.js");
-
-let DUMMY_PLACES = [
-  {
-    id: "p1",
-    title: "Empire State Building",
-    description: "One of the most famouse skyscrapers in the world.",
-    location: {
-      lat: 40.7484474,
-      lng: -73.9871516,
-    },
-    address: "20 W 34th St, New York, NY 10001",
-    creator: "u1",
-  },
-];
+const User = require("../models/users.js");
+const mongooseUniqueValidator = require("mongoose-unique-validator");
 
 const getPlaceById = async (req, res, next) => {
-  const placeId = req.params.pid; // {pid: 'p1'}
+  const placeId = req.params.pid; 
 
   let place;
   try {
@@ -44,25 +33,27 @@ const getPlaceById = async (req, res, next) => {
 const getPlacesByUserId = async (req, res, next) => {
   const userId = req.params.uid; // {pid: 'p1'}
 
-  let places;
+  // let places;
+  let userWithPlaces; 
   try {
-    places = await Place.find({ creator: userId });
+    userWithPlaces = await User.findById(userId).populate('places');
   } catch (err) {
     const error = new HttpError(
       "Something went wrong, could not find places for specified user id.",
-      505
+      500
     );
     return next(error);
   }
 
-  if (!places || places.length === 0) {
+  // if (!places || places.length === 0)...
+  if (!userWithPlaces || userWithPlaces.places.length === 0) {
     return next(
       new HttpError("Could not find a place for the provided user id.", 404)
     );
   }
 
   res.json({
-    places: places.map((place) => place.toObject({ getters: true })),
+    places: userWithPlaces.places.map((place) => place.toObject({ getters: true })),
   }); // { place } => { place: place }
 };
 
@@ -95,8 +86,34 @@ const createPlace = async (req, res, next) => {
     creator,
   });
 
+  let user; 
+
   try {
-    await createdPlace.save();
+    user = await User.findById(creator); 
+  } catch (err) {
+    const error = new HttpError("Creating place failed please try again.", 500);
+    return next(error);
+  }
+
+  console.log(user);
+
+  if(!user) {
+    const error = new HttpError("The specified user id does not exist.", 404);
+    return next(error); 
+  }
+
+  /* starting the transaction and session ensures that each of the
+    following tasks actually complete successfully before saving. We 
+    wouldnt't want one to complete then save, and the next to fail and have 
+    no way to revert the previous save. Instead, if any of the processes fail, 
+    none of them will save when a transaction occurs. */
+  try {
+    const sess = await mongoose.startSession();
+    sess.startTransaction(); 
+    await createdPlace.save({ session: sess }); 
+    user.places.push(createdPlace); // mongoose push grabs the place id and adds it to the user places field.
+    await user.save({ session: sess }); 
+    await sess.commitTransaction();
   } catch (err) {
     const error = new HttpError("Creating place failed please try again.", 500);
     return next(error);
@@ -150,14 +167,25 @@ const deletePlace = async (req, res, next) => {
 
   let deletedPlace; 
   try{
-    deletedPlace = await Place.findById(placeId);
+    deletedPlace = await Place.findById(placeId).populate('creator'); // populate automatically gets list of references in the specified field and allows you to access them via that field. 
   } catch(err) {
     const error = new HttpError('Something went wrong could not find place by specified id.', 500); 
     return next(error); 
   }
 
+  if (!deletedPlace) {
+    const error = new HttpError('Could not find a place with the specified id.', 404); 
+    return next(error); 
+  }
+
+  
   try{
-    await deletedPlace.remove();
+    const sess = await mongoose.startSession(); 
+    sess.startTransaction(); 
+    await deletedPlace.remove({session: sess});
+    deletedPlace.creator.places.pull(deletedPlace); 
+    await deletedPlace.creator.save({session: sess});
+    await sess.commitTransaction(); 
   } catch(err) {
     const error = new HttpError('Something went wrong could not delete place.', 500); 
     return next(error); 
