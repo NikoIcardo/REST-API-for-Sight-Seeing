@@ -1,79 +1,94 @@
-const { validationResult } = require("express-validator");
+const { validationResult } = require('express-validator');
 
-const HttpError = require("../models/http-error");
+const HttpError = require('../models/http-error');
 const User = require('../models/users');
 
 const login = async (req, res, next) => {
   const { email, password } = req.body;
 
-  let user; 
-  try{
-    user = await User.findOne({email: email})
+  let user;
+  try {
+    user = await User.findOne({ email: email });
   } catch (err) {
-    const error = new HttpError('Something went wrong, unable find user with specified email address.', 500);
-    return next(error); 
-  }
-  
-  if (!user || user.password !== password) {
-    const error = new HttpError('Invalid credentials, could not log you in.', 401);
+    const error = new HttpError(
+      'Something went wrong, unable find user with specified email address.',
+      500
+    );
     return next(error);
   }
 
-  res.status(200).json({ message: "Login Successful!" });
+  if (!user || user.password !== password) {
+    const error = new HttpError(
+      'Invalid credentials, could not log you in.',
+      401
+    );
+    return next(error);
+  }
+
+  res.status(200).json({ message: 'Login Successful!', user: user.toObject({getters: true})});
 };
 
 const signup = async (req, res, next) => {
-  const errors = validationResult(req); 
+  const errors = validationResult(req);
 
-  if(!errors.isEmpty()){
+  if (!errors.isEmpty()) {
     console.log(errors.errors);
-    const error = new HttpError('Could not signup, please check that you entered a valid name, email, and password.', 422);
+    const error = new HttpError(
+      'Could not signup, please check that you entered a valid name, email, and password.',
+      422
+    );
     return next(error);
   }
 
   const { name, email, password } = req.body;
 
   let existingUser;
-  try{
-    existingUser = await User.findOne({email: email});
+  try {
+    existingUser = await User.findOne({ email: email });
   } catch (err) {
-    const error = new HttpError('Something went wrong, unable to check specified email address.', 500);
-    return next(error); 
+    const error = new HttpError(
+      'Something went wrong, unable to check specified email address.',
+      500
+    );
+    return next(error);
   }
 
   if (existingUser) {
-    const error = new HttpError('User exists already, please login.', 422); 
-    return next(error); 
+    const error = new HttpError('User exists already, please login.', 422);
+    return next(error);
   }
 
   const createUser = new User({
-    name, 
-    email, 
-    image: 
-    'https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.eguardtech.com%2Fblog%2Fchanging-your-network-profile%2F&psig=AOvVaw3_9smKJbQxvAwaFExUMnrc&ust=1628774683793000&source=images&cd=vfe&ved=0CAsQjRxqFwoTCMjMgNyIqfICFQAAAAAdAAAAABAE', 
-    password, 
-    places: []
-  }); 
+    name,
+    email,
+    image:
+      'https://www.seekpng.com/png/full/41-410093_circled-user-icon-user-profile-icon-png.png',
+    password,
+    places: [],
+  });
 
-  try{
+  try {
     await createUser.save();
   } catch (err) {
     const error = new HttpError('Something went wrong, unable to signup.', 500);
-    return next(error); 
+    return next(error);
   }
 
-  res.status(201).json({user: createUser.toObject({getters: true})});
+  res.status(201).json({ user: createUser.toObject({ getters: true }) });
 };
 
 const retrieveUsers = async (req, res, next) => {
-  let allUsers; 
+  let allUsers;
   try {
-    allUsers = await User.find({}, '-password'); 
-  } catch(err) {
-    const error = new HttpError('Something went wrong, unable to retrieve user list right now.', 500);
-    return next(error);  
+    allUsers = await User.find({}, '-password');
+  } catch (err) {
+    const error = new HttpError(
+      'Something went wrong, unable to retrieve user list right now.',
+      500
+    );
+    return next(error);
   }
-  res.json({users: allUsers.map(user => user.toObject({getters: true}))}); 
+  res.json({ users: allUsers.map((user) => user.toObject({ getters: true })) });
 };
 
 exports.login = login;
