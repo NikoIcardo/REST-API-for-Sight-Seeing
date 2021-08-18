@@ -165,7 +165,7 @@ const updatePlace = async (req, res, next) => {
 };
 
 const deletePlace = async (req, res, next) => {
-  placeId = req.params.pid;
+  const placeId = req.params.pid;
 
   let deletedPlace;
   try {
@@ -200,6 +200,8 @@ const deletePlace = async (req, res, next) => {
     );
     return next(error);
   }
+
+  res.status(200).json({message: 'Deleted place.'})
 };
 
 exports.getPlaceById = getPlaceById;
