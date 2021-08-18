@@ -8,3 +8,4 @@
  - BodyParser
  - Axios
  - Mongoose
+ - Multer
