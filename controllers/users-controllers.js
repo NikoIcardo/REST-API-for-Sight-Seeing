@@ -37,6 +37,7 @@ const signup = async (req, res, next) => {
       'Could not signup, please check that you entered a valid name, email, and password.',
       422
     );
+    console.log(error);
     return next(error);
   }
 
@@ -50,19 +51,20 @@ const signup = async (req, res, next) => {
       'Something went wrong, unable to check specified email address.',
       500
     );
+    console.log(error);
     return next(error);
   }
 
   if (existingUser) {
     const error = new HttpError('User exists already, please login.', 422);
+    console.log(error);
     return next(error);
   }
 
   const createUser = new User({
     name,
     email,
-    image:
-      'https://www.seekpng.com/png/full/41-410093_circled-user-icon-user-profile-icon-png.png',
+    image: req.file.path,
     password,
     places: [],
   });
@@ -71,6 +73,7 @@ const signup = async (req, res, next) => {
     await createUser.save();
   } catch (err) {
     const error = new HttpError('Something went wrong, unable to signup.', 500);
+    console.log(error);
     return next(error);
   }
 
@@ -88,7 +91,7 @@ const retrieveUsers = async (req, res, next) => {
     );
     return next(error);
   }
-  res.json({ users: allUsers.map((user) => user.toObject({ getters: true })) });
+  res.status(201).json({ users: allUsers.map((user) => user.toObject({ getters: true })) });
 };
 
 exports.login = login;

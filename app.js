@@ -1,3 +1,6 @@
+const fs = require('fs');
+const path = require('path');
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
@@ -11,6 +14,8 @@ const url =
   'mongodb+srv://Niko:eKkVDD5ZQ44JsDn@cluster0.arfc1.mongodb.net/mern?retryWrites=true&w=majority';
 
 app.use(bodyParser.json()); // this will extract any json data and convert it to js data structures, then call next automatically
+
+app.use('/uploads/images', express.static(path.join('uploads', 'images')));
 
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -32,6 +37,11 @@ app.use((req, res, next) => {
 });
 
 app.use((error, req, res, next) => {
+  if(req.file) {
+    fs.unlink(req.file.path, (err) => {
+      console.log(err);
+    });
+  }
   if (res.headerSent) {
     return next(error);
   }
