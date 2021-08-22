@@ -9,3 +9,5 @@
  - Axios
  - Mongoose
  - Multer
+ - Bcrypt.js
+ - Json Web Token
