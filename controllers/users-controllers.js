@@ -52,7 +52,7 @@ const login = async (req, res, next) => {
   try {
     token = jwt.sign(
       { userId: user.id, email: user.email },
-      'supersecret_dont_share',
+      'supersecret_dont_share', // key to generate token. Should be kept a secret in every real world situation. 
       { expiresIn: '1h' }
     );
   } catch(err) {

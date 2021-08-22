@@ -3,6 +3,7 @@ const { check } = require('express-validator');
 
 const placesControllers = require('../controllers/places-controllers');
 const fileUpload = require('../middleware/file-upload');
+const checkAuth = require('../middleware/check-auth');
 
 const router = express.Router();
 /* gives a special object that can also register middleware, 
@@ -12,6 +13,9 @@ const router = express.Router();
 router.get('/:pid', placesControllers.getPlaceById);
 
 router.get('/user/:uid', placesControllers.getPlacesbyUserId);
+
+// All routes below are token protected
+router.use(checkAuth);
 
 router.post(
   '/',
