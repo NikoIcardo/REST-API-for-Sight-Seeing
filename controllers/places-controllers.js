@@ -1,3 +1,5 @@
+const fs = require('fs');
+
 const { v4: uuidv4 } = require('uuid'); // unique id with a timestamp component
 const { validationResult } = require('express-validator');
 const mongoose = require('mongoose');
@@ -83,8 +85,7 @@ const createPlace = async (req, res, next) => {
     description,
     address,
     location: coordinates,
-    image:
-      'https://images.unsplash.com/photo-1555109307-f7d9da25c244?ixid=MnwxMjA3fDB8MHxzZWFyY2h8MXx8ZW1waXJlJTIwc3RhdGUlMjBidWlsZGluZ3xlbnwwfHwwfHw%3D&ixlib=rb-1.2.1&w=1000&q=80',
+    image: req.file.path,
     creator,
   });
 
@@ -186,6 +187,8 @@ const deletePlace = async (req, res, next) => {
     return next(error);
   }
 
+  const imagePath = deletedPlace.image;
+
   try {
     const sess = await mongoose.startSession();
     sess.startTransaction();
@@ -200,6 +203,10 @@ const deletePlace = async (req, res, next) => {
     );
     return next(error);
   }
+
+  fs.unlink(imagePath, err => {
+    console.log(err);
+  });
 
   res.status(200).json({message: 'Deleted place.'})
 };
