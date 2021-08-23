@@ -98,8 +98,6 @@ const createPlace = async (req, res, next) => {
     return next(error);
   }
 
-  console.log(user);
-
   if (!user) {
     const error = new HttpError('The specified user id does not exist.', 404);
     return next(error);
@@ -147,9 +145,15 @@ const updatePlace = async (req, res, next) => {
     return next(error);
   }
 
-  console.log(updatedPlace.title);
+  if (updatedPlace.creator.toString() !== req.userData.userId) {
+    const error = new HttpError(
+      'You are not allowed to edit this place.',
+      401
+    );
+    return next(error);
+  }
+
   updatedPlace.title = title;
-  console.log(updatedPlace.title);
   updatedPlace.description = description;
 
   try {
@@ -183,6 +187,14 @@ const deletePlace = async (req, res, next) => {
     const error = new HttpError(
       'Could not find a place with the specified id.',
       404
+    );
+    return next(error);
+  }
+
+  if (deletedPlace.creator.id !== req.userData.userId) {
+    const error = new HttpError(
+      'You are not allowed to delete this place.',
+      401
     );
     return next(error);
   }
