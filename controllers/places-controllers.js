@@ -71,7 +71,7 @@ const createPlace = async (req, res, next) => {
     ); // throw does not work with async express functions
   }
 
-  const { title, description, address, creator } = req.body;
+  const { title, description, address } = req.body;
 
   let coordinates;
   try {
@@ -86,7 +86,7 @@ const createPlace = async (req, res, next) => {
     address,
     location: coordinates,
     image: req.file.path,
-    creator,
+    creator: req.userData.userId,
   });
 
   let user;
@@ -146,10 +146,7 @@ const updatePlace = async (req, res, next) => {
   }
 
   if (updatedPlace.creator.toString() !== req.userData.userId) {
-    const error = new HttpError(
-      'You are not allowed to edit this place.',
-      401
-    );
+    const error = new HttpError('You are not allowed to edit this place.', 401);
     return next(error);
   }
 
@@ -216,11 +213,11 @@ const deletePlace = async (req, res, next) => {
     return next(error);
   }
 
-  fs.unlink(imagePath, err => {
+  fs.unlink(imagePath, (err) => {
     console.log(err);
   });
 
-  res.status(200).json({message: 'Deleted place.'})
+  res.status(200).json({ message: 'Deleted place.' });
 };
 
 exports.getPlaceById = getPlaceById;
